@@ -1,17 +1,19 @@
 import functools
 
-class LazyList(object):
-    def finite(func):
-        @functools.wraps(func)
-        def wrap(self, *args, **kwargs):
-            if self.size == -1:
-                raise ValueError("Invalid Operation on Infinite List!")
-            func(self, *args, **kwargs)
-        return wrap
+def finite(func):
+    @functools.wraps(func)
+    def wrap(self, *args, **kwargs):
+        if self.size == -1:
+            raise ValueError("Invalid Operation on Infinite List!")
+        func(self, *args, **kwargs)
+    return wrap
 
-    def __init__(self, generator, size):
-        self.size = size
+class LazyList(object):
+
+    def __init__(self, generator, size, is_inf = False):
         self.g = generator
+        self.size = size
+        self.is_inf = is_inf
         self.m = {}
 
     def __len__(self):
@@ -26,20 +28,20 @@ class LazyList(object):
                 size = (step - start) // stop + 1
             return LazyList(lambda _, i : self[start + i * step], size)
         elif isinstance(s, int):
-            if  != -1 and i >= self.size:
+            if self.size != -1 and s >= self.size:
                 raise IndexError
-            if i in self.m
-                return self.m[i]
-            self._evaluate(i)
-            return self.m[i]
+            if s in self.m:
+                return self.m[s]
+            self._evaluate(s)
+            return self.m[s]
         else:
             raise IndexError
         
     def _evaluate(self, i):
-        self.m[i] = self.g(self, m[i])
+        self.m[i] = self.g(self, self.m[i])
     
     def map(self, f):
-        return LazyList(lambda _, i : f(self[i]))
+        return LazyList(lambda _, i : f(self[i]), self.size)
 
     @finite
     def to_list(self):
@@ -78,11 +80,21 @@ class LazyList(object):
 
     @finite
     def reverse(self):
-        pass
+        return LazyList(lambda _, i : self[self.size - 1 - i], self.size)
     
     def filter(self, f):
-        pass
+        data = []
+        last_index = 0
+        def getitem(s, i):
+            if i >= len(data):
+                for j in range(len(data), i + 1):
+                    while not f(self[last_index]):
+                        last_index += 1
+                    data.append(self[last_index])
+            return data[i]
+        return LazyList(getitem, -1)
     
+
     def partition(self, f):
         pass
     
