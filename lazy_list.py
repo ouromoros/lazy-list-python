@@ -1,7 +1,7 @@
 import functools
 
 
-def finite(func):
+def check_finite(func):
     @functools.wraps(func)
     def wrap(self, *args, **kwargs):
         if self.inf:
@@ -33,7 +33,7 @@ class LazyList(object):
         self.size = i
         return self.size
 
-    def __contains(self, item):
+    def __contains__(self, item):
         return self.elem_index(item) != -1
 
     def __getitem__(self, key):
@@ -49,32 +49,36 @@ class LazyList(object):
             self._evaluate(key)
             return self.m[key]
         else:
-            raise IndexError("Index can only be slice or integer!")
+            raise KeyError("Index can only be slice or integer!")
+    
+    def __str__(self):
+        return str(self.to_list())
 
     def _evaluate(self, i):
         self.m[i] = self.g(self, i)
 
     def map(self, f):
-        return LazyList(lambda _, i: f(self[i]), self.size)
+        return LazyList(lambda _, i: f(self[i]), self.size, self.inf)
 
-    @finite
+    @check_finite
     def to_list(self):
         return [self[i] for i in range(len(self))]
 
-    @finite
+    @check_finite
     def append(self, a):
         def getitem(_, i):
-            if i == self.size:
+            if i == len(self):
                 return a
             return self[i]
-        return LazyList(getitem, self.size + 1)
+        return LazyList(getitem)
 
-    @finite
+    @check_finite
     def concat(self, l):
         def getitem(_, i):
-            if i < self.size:
+            try:
                 return self[i]
-            return l[i - self.size]
+            except IndexError:
+                return l[i - len(self)]
 
         if l.inf:
             inf = True
@@ -86,15 +90,16 @@ class LazyList(object):
             size = None
         return LazyList(getitem, size, inf)
 
-    @finite
+    @check_finite
     def reverse(self):
-        return LazyList(lambda _, i: self[self.size - 1 - i], self.size)
+        return LazyList(lambda _, i: self[len(self) - 1 - i], len(self))
 
     def filter(self, f):
         data = []
         last_index = 0
 
         def getitem(_, i):
+            nonlocal data
             nonlocal last_index
             if i >= len(data):
                 for _ in range(len(data), i + 1):
@@ -131,7 +136,11 @@ class LazyList(object):
         return self.filter(f).take(n)
 
     def drop(self, n):
-        pass
+        if self.size:
+            size = self.size - n
+        else:
+            size = None
+        return LazyList(lambda _, i: self[i + n], size, self.inf)
 
     def flat_map(self, f):
         pass
@@ -140,12 +149,13 @@ class LazyList(object):
         pass
 
     def zip(self, *args):
-        pass
+        ls = args + [self]
+        return LazyList(lambda i: tuple(l[i] for l in ls))
 
 
 naturals = LazyList(lambda _, i: i, inf=True)
-zeros = LazyList(lambda _, i: 0, inf=True)
-ones = LazyList(lambda _, i: 1, inf=True)
+zeros = LazyList(lambda *_: 0, inf=True)
+ones = LazyList(lambda *_: 1, inf=True)
 empty = LazyList(None, 0)
 
 
@@ -155,4 +165,4 @@ def make_lazy_list(iterable):
 
 
 def repeat(item):
-    return LazyList(lambda _, i: item, inf=True)
+    return LazyList(lambda *_: item, inf=True)
