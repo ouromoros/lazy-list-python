@@ -1,5 +1,6 @@
 from lazy_list import *
 import random
+import pytest
 
 
 def test_consts():
@@ -30,3 +31,41 @@ def test_basic():
     c = a.filter(lambda x: x % 2 == 0)
     l2 = [2, 6]
     assert c.to_list() == l2
+    with pytest.raises(IndexError):
+        c[2]
+
+def test_iter():
+    l = [2, 5, 6, 7, 9]
+    a = make_lazy_list(l)
+    for i, x in enumerate(a):
+        assert l[i] == x
+
+def test_inf():
+    a = naturals
+    b = naturals.map(lambda x: x * 2 + 1)
+    for i in range(1000):
+        j = random.randint(0, 1000)
+        assert b[j] == j * 2 + 1
+
+def test_concat():
+    l1 = [0, 2, 4]
+    l2 = [5, 6, 7]
+    a = make_lazy_list(l1)
+    b = make_lazy_list(l2)
+    c = a.concat(b)
+    assert c.to_list() == l1 + l2
+
+def test_reverse():
+    pass
+
+def test_append():
+    pass
+
+def test_take():
+    pass
+
+def test_zip():
+    pass
+
+def test_elem_index():
+    pass
