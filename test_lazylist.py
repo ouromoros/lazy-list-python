@@ -20,7 +20,7 @@ def test_consts():
 
 def test_basic():
     l = [2, 5, 6, 7, 9]
-    a = make_lazy_list(l)
+    a = make_lazylist(l)
     assert len(a) == 5
     for i in range(len(a)):
         assert a[i] == l[i]
@@ -36,7 +36,7 @@ def test_basic():
 
 def test_iter():
     l = [2, 5, 6, 7, 9]
-    a = make_lazy_list(l)
+    a = make_lazylist(l)
     for i, x in enumerate(a):
         assert l[i] == x
 
@@ -50,8 +50,8 @@ def test_inf():
 def test_concat():
     l1 = [0, 2, 4]
     l2 = [5, 6, 7]
-    a = make_lazy_list(l1)
-    b = make_lazy_list(l2)
+    a = make_lazylist(l1)
+    b = make_lazylist(l2)
     c = a.concat(b)
     assert c.to_list() == l1 + l2
 
