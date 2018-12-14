@@ -1,4 +1,4 @@
-from lazy_list import *
+from lazylist import *
 import random
 import pytest
 
