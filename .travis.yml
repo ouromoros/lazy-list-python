@@ -5,8 +5,8 @@
     - "3.6"
     - "pypy3"
   install:
-    - pip install codecov
+    - pip install codecov pytest-cov
   script:
-    - pytest --cov=codecov
+    - pytest --cov=lazylist.py
   after_success:
     - codecov
