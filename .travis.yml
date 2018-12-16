@@ -7,6 +7,6 @@
   install:
     - pip install codecov pytest-cov
   script:
-    - pytest --cov lazylist.py
+    - pytest --cov=lazylist
   after_success:
     - codecov
