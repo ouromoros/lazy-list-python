@@ -4,6 +4,7 @@ lazylist
 Haskell-like lazily evaluated list in Python.
 """
 import functools
+import math
 
 
 def check_finite(func):
@@ -39,10 +40,12 @@ class LazyList(object):
         self.getsize = getsize
         self.inf = inf
         self.size = None
+        if self.inf:
+            self.size = math.inf
 
     def __len__(self):
         if self.inf:
-            return None
+            return math.inf
         if self.size:
             return self.size
         if self.getsize:
@@ -64,7 +67,8 @@ class LazyList(object):
 
     def __getitem__(self, key):
         if isinstance(key, slice):
-            start, stop, step = key.start or 0, key.stop or len(self), key.step or 1
+            start, stop, step = key.start or 0, key.stop or len(
+                self), key.step or 1
             if stop:
                 size = (stop - start) // step + 1
                 return LazyList(lambda _, i: self[start + i * step], const(size))
@@ -85,6 +89,17 @@ class LazyList(object):
         self.cache[i] = self.func(self, i)
 
     @check_finite
+    def __add__(self, other):
+        """Returns list with the provided list concatenated to the end."""
+        def getitem(_, i):
+            try:
+                return self[i]
+            except IndexError:
+                return other[i - len(self)]
+
+        return LazyList(getitem, lambda: len(self) + len(other), self.inf or other.inf)
+
+    @check_finite
     def to_list(self):
         """Returns corresponding Python built-in list. Raises `ValueError` if called
         on infinite list.
@@ -93,8 +108,28 @@ class LazyList(object):
             raise ValueError
         return [self[i] for i in range(len(self))]
 
+    def head(self):
+        return self[0]
+
+    def last(self):
+        return self[len(self) - 1]
+
+    def tail(self):
+        return LazyList(lambda _, i: self[i + 1], lambda: len(self) - 1)
+
+    def init(self):
+        pass
+
+    def null(self):
+        return len(self) == 0
+
     def map(self, f):
         return LazyList(lambda _, i: f(self[i]), lambda: len(self), self.inf)
+
+    @check_finite
+    def reverse(self):
+        """Returns reveresed list."""
+        return LazyList(lambda _, i: self[len(self) - 1 - i], lambda: len(self))
 
     @check_finite
     def append(self, a):
@@ -105,27 +140,46 @@ class LazyList(object):
             return self[i]
         return LazyList(getitem, lambda: len(self) + 1)
 
-    @check_finite
-    def concat(self, l):
-        """Returns list with the provided list concatenated to the end."""
-        def getitem(_, i):
-            try:
-                return self[i]
-            except IndexError:
-                return l[i - len(self)]
+    def intersperse(self, x):
+        pass
 
-        if l.inf:
-            inf = True
-        else:
-            inf = False
-        return LazyList(getitem, lambda: len(self) + len(l), inf)
+    def intercalate(self, x):
+        pass
 
-    @check_finite
-    def reverse(self):
-        """Returns reveresed list."""
-        return LazyList(lambda _, i: self[len(self) - 1 - i], lambda: len(self))
+    def transpose(self):
+        pass
 
-    def filter(self, f):
+    def subsequences(self):
+        pass
+
+    def permutations(self):
+        pass
+
+    def foldl(self):
+        pass
+
+    def foldr(self):
+        pass
+
+    def concat(self):
+        pass
+
+    def concat_map(self, f):
+        pass
+
+    def sum(self):
+        return sum(self)
+
+    def scanl(self):
+        pass
+
+    def scanr(self):
+        pass
+
+    def find(self, p):
+        pass
+
+    def filter(self, p):
         data = []
         last_index = 0
 
@@ -134,7 +188,7 @@ class LazyList(object):
             nonlocal last_index
             if i >= len(data):
                 for _ in range(len(data), i + 1):
-                    while not f(self[last_index]):
+                    while not p(self[last_index]):
                         last_index += 1
                     data.append(self[last_index])
                     last_index += 1
@@ -145,7 +199,7 @@ class LazyList(object):
             nonlocal last_index
             while True:
                 try:
-                    while not f(self[last_index]):
+                    while not p(self[last_index]):
                         last_index += 1
                     data.append(self[last_index])
                 except IndexError:
@@ -171,14 +225,14 @@ class LazyList(object):
                 return -1
             i += 1
 
-    def tails(self):
-        return LazyList(lambda _, i: self[i + 1], lambda: len(self) - 1)
-
     def take(self, n):
         return LazyList(lambda _, i: self[i], const(n))
 
-    def takeWhile(self, f, n):
-        return self.filter(f).take(n)
+    def take_while(self, p, n):
+        return self.filter(p).take(n)
+
+    def splitAt(self, n):
+        pass
 
     def drop(self, n):
         if self.size:
@@ -187,7 +241,22 @@ class LazyList(object):
             size = None
         return LazyList(lambda _, i: self[i + n], const(size), self.inf)
 
-    def flat_map(self, f):
+    def drop_while(self, n):
+        pass
+
+    def span(self, p):
+        pass
+
+    def break_(self, p):
+        pass
+
+    def group(self):
+        pass
+
+    def inits(self):
+        pass
+
+    def tails(self):
         pass
 
     def replicate(self, n):
@@ -195,8 +264,27 @@ class LazyList(object):
 
     def zip(self, *args):
         pass
-        # ls = args + [self]
-        # return LazyList(lambda i: tuple(l[i] for l in ls))
+
+
+def make_lazylist(iterable):
+    """Returns a list whose values are adapted from supplied iterable."""
+    copy = list(iterable)
+    return LazyList(lambda _, i: copy[i], const(len(copy)))
+
+
+def repeat(item):
+    """Returns an infinite list where every element is `x`."""
+    return LazyList(lambda *_: item, inf=True)
+
+
+def iterate(f, x):
+    """Returns an infinite list of repeated applications of `f` to `x`."""
+    pass
+
+
+def cycle(xs):
+    """Returns an infinite list which is an infinite repetition of `xs`."""
+    return LazyList(lambda _, i: xs[i % len(xs)], inf=True)
 
 
 naturals = LazyList(lambda _, i: i, inf=True)
@@ -207,14 +295,3 @@ ones = LazyList(lambda *_: 1, inf=True)
 """List of ones."""
 empty = LazyList(None, const(0))
 """Empty list."""
-
-
-def make_lazylist(iterable):
-    """Returns `LazyList` made from supplied iterable."""
-    copy = list(iterable)
-    return LazyList(lambda _, i: copy[i], const(len(copy)))
-
-
-def repeat(item):
-    """Returns list in which every element is the supplied item."""
-    return LazyList(lambda *_: item, inf=True)

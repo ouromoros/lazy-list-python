@@ -47,12 +47,12 @@ def test_inf():
         j = random.randint(0, 1000)
         assert b[j] == j * 2 + 1
 
-def test_concat():
+def test_add():
     l1 = [0, 2, 4]
     l2 = [5, 6, 7]
     a = make_lazylist(l1)
     b = make_lazylist(l2)
-    c = a.concat(b)
+    c = a + b
     assert c.to_list() == l1 + l2
 
 def test_reverse():
