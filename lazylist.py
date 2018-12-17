@@ -40,12 +40,10 @@ class LazyList(object):
         self.getsize = getsize
         self.inf = inf
         self.size = None
-        if self.inf:
-            self.size = math.inf
 
     def __len__(self):
         if self.inf:
-            return math.inf
+            return 0
         if self.size:
             return self.size
         if self.getsize:
@@ -69,7 +67,7 @@ class LazyList(object):
         if isinstance(key, slice):
             start, stop, step = key.start or 0, key.stop or len(
                 self), key.step or 1
-            if stop:
+            if not self.inf and stop:
                 size = (stop - start) // step + 1
                 return LazyList(lambda _, i: self[start + i * step], const(size))
             # when stop is not provided and self is infinite, result is infinite
@@ -98,6 +96,18 @@ class LazyList(object):
                 return other[i - len(self)]
 
         return LazyList(getitem, lambda: len(self) + len(other), self.inf or other.inf)
+
+    def call(self, f):
+        """Returns list which is the result of applying `f` to `self`."""
+        result = None
+        def getitem(_, i):
+            nonlocal result
+            if result:
+                return result[i]
+            result = f(self)
+            return result[i]
+        return LazyList(getitem, inf=self.inf)
+
 
     @check_finite
     def to_list(self):
@@ -194,22 +204,10 @@ class LazyList(object):
                     last_index += 1
             return data[i]
 
-        def getsize():
-            nonlocal data
-            nonlocal last_index
-            while True:
-                try:
-                    while not p(self[last_index]):
-                        last_index += 1
-                    data.append(self[last_index])
-                except IndexError:
-                    break
-                last_index += 1
-            return len(data)
-        return LazyList(getitem, getsize, self.inf)
+        return LazyList(getitem, inf=self.inf)
 
-    def partition(self, f):
-        return (self.filter(f), self.filter(lambda x: not f(x)))
+    def partition(self, p):
+        return (self.filter(p), self.filter(lambda x: not p(x)))
 
     def elem_index(self, item):
         """Returns the index of corresponding element. Returns -1 if not found."""
